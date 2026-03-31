@@ -1,0 +1,18 @@
+{
+    "EUR": "EURUSD.FX",
+    "GBP": "GBPUSD.FX",
+    "JPY": "USDJPY.FX",
+    "CNY": "USDCNY.FX",
+    "CNH": "USDCNH.FX",
+    "HKD": "USDHKD.FX",
+    "AUD": "AUDUSD.FX",
+    "CHF": "USDCHF.FX",
+    "CAD": "USDCAD.FX",
+    "KRW": "USDKRW.FX",
+    "TWD": "USDTWD.FX",
+    "SGD": "USDSGD.FX",
+    "INR": "USDINR.FX",
+    "BRL": "USDBRL.FX",
+    "MXN": "USDMXN.FX",
+    "DXY": "DXY.GI"
+}

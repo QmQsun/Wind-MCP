@@ -1,0 +1,3 @@
+@echo off
+echo Starting Wind MCP Server...
+python -m wind_mcp.server %*
