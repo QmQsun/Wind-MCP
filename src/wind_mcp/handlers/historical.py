@@ -9,6 +9,7 @@ from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wsd
 from ..core.converter import ensure_wind_codes
+from ..core.executor import run_wind_sync
 from ..tools.field_expander import expand_fields
 from ..models.inputs import HistoricalInput
 
@@ -37,7 +38,7 @@ def handle_historical(params: HistoricalInput) -> list[dict]:
         f"begin={params.begin_date}, end={params.end_date}"
     )
 
-    result = session.w.wsd(codes_str, fields_str, params.begin_date, params.end_date, params.options)
+    result = run_wind_sync(session.w.wsd, codes_str, fields_str, params.begin_date, params.end_date, params.options)
     parsed = parse_wsd(result)
 
     cache.set("wsd", parsed, "historical", *cache_key_args)

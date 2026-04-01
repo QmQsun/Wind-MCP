@@ -9,6 +9,7 @@ from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wss
 from ..core.converter import ensure_wind_codes
+from ..core.executor import run_wind_sync
 from ..models.inputs import EstimatesInput
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def handle_estimates(params: EstimatesInput) -> list[dict]:
     session = WindSession.get()
     logger.info(f"Estimates WSS: codes={codes_str}, fields={fields_str}")
 
-    result = session.w.wss(codes_str, fields_str, params.options)
+    result = run_wind_sync(session.w.wss, codes_str, fields_str, params.options)
     parsed = parse_wss(result)
 
     cache.set("estimates", parsed, "estimates", *cache_key_args)

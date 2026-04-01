@@ -11,6 +11,7 @@ from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wss, parse_wset
 from ..core.converter import ensure_wind_codes
+from ..core.executor import run_wind_sync
 from ..models.inputs import HoldersInput
 
 logger = logging.getLogger(__name__)
@@ -43,17 +44,17 @@ def handle_holders(params: HoldersInput) -> list[dict]:
             options = f"holderType=tradable;{options}" if options else "holderType=tradable"
 
         logger.info(f"Holders WSS: codes={codes_str}, type={params.holder_type}")
-        result = session.w.wss(codes_str, fields_str, options)
+        result = run_wind_sync(session.w.wss, codes_str, fields_str, options)
         parsed = parse_wss(result)
     elif params.holder_type == "fund_holder":
         logger.info(f"Holders WSET FundPortfolio: codes={codes_str}")
         options = f"windcode={codes_str}" if not params.options else params.options
-        result = session.w.wset("FundPortfolio", options)
+        result = run_wind_sync(session.w.wset, "FundPortfolio", options)
         parsed = parse_wset(result)
     elif params.holder_type == "institutional":
         logger.info(f"Holders WSS institutional: codes={codes_str}")
         fields_str = "holder_institutionnum,holder_institution_pct,holder_fundnum,holder_fund_pct"
-        result = session.w.wss(codes_str, fields_str, params.options)
+        result = run_wind_sync(session.w.wss, codes_str, fields_str, params.options)
         parsed = parse_wss(result)
     else:
         raise ValueError(f"Unknown holder_type: {params.holder_type}")

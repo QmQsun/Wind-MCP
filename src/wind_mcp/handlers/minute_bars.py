@@ -9,6 +9,7 @@ from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wsi
 from ..core.converter import ensure_wind_codes
+from ..core.executor import run_wind_sync
 from ..tools.field_expander import expand_fields
 from ..models.inputs import MinuteBarsInput
 
@@ -33,7 +34,7 @@ def handle_minute_bars(params: MinuteBarsInput) -> list[dict]:
     session = WindSession.get()
     logger.info(f"WSI: codes={codes_str}, fields={fields_str}, begin={params.begin_time}")
 
-    result = session.w.wsi(codes_str, fields_str, params.begin_time, params.end_time, params.options)
+    result = run_wind_sync(session.w.wsi, codes_str, fields_str, params.begin_time, params.end_time, params.options)
     parsed = parse_wsi(result)
 
     cache.set("wsi", parsed, "minute_bars", *cache_key_args)

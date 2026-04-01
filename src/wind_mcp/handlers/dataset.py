@@ -8,6 +8,7 @@ import logging
 from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wset
+from ..core.executor import run_wind_sync
 from ..models.inputs import DatasetInput
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ def handle_dataset(params: DatasetInput) -> list[dict]:
     session = WindSession.get()
     logger.info(f"WSET: table={params.table_name}, options={params.options}")
 
-    result = session.w.wset(params.table_name, params.options)
+    result = run_wind_sync(session.w.wset, params.table_name, params.options)
     parsed = parse_wset(result)
 
     cache.set("wset", parsed, "dataset", *cache_key_args)

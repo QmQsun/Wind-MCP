@@ -9,6 +9,7 @@ from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wss
 from ..core.converter import ensure_wind_codes
+from ..core.executor import run_wind_sync
 from ..tools.field_expander import expand_fields
 from ..models.inputs import SnapshotInput
 
@@ -44,11 +45,11 @@ def handle_snapshot(params: SnapshotInput) -> list[dict]:
         logger.debug("Cache hit for WSS query")
         return cached
 
-    # Call Wind API
+    # Call Wind API (serialized through executor)
     session = WindSession.get()
     logger.info(f"WSS: codes={codes_str}, fields={fields_str}, options={params.options}")
 
-    result = session.w.wss(codes_str, fields_str, params.options)
+    result = run_wind_sync(session.w.wss, codes_str, fields_str, params.options)
     parsed = parse_wss(result)
 
     # Store in cache

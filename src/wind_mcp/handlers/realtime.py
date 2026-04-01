@@ -10,6 +10,7 @@ from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wsq
 from ..core.converter import ensure_wind_codes
+from ..core.executor import run_wind_sync
 from ..tools.field_expander import expand_fields
 from ..models.inputs import RealtimeInput
 
@@ -35,7 +36,7 @@ def handle_realtime(params: RealtimeInput) -> list[dict]:
     logger.info(f"WSQ: codes={codes_str}, fields={fields_str}")
 
     # WSQ takes only codes and fields, no options
-    result = session.w.wsq(codes_str, fields_str)
+    result = run_wind_sync(session.w.wsq, codes_str, fields_str)
     parsed = parse_wsq(result)
 
     cache.set("wsq", parsed, "realtime", *cache_key_args)

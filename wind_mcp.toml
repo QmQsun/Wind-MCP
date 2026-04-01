@@ -1,0 +1,33 @@
+# Wind MCP Server Configuration
+# Override any value via environment variable: WIND_MCP_<SECTION>_<KEY>
+# e.g., WIND_MCP_CACHE_MAXSIZE=5000
+
+[session]
+connect_timeout = 30
+reconnect_retries = 3
+reconnect_backoff = 1.0
+
+[cache]
+maxsize = 2000
+ttl_realtime = 30       # WSQ — near real-time
+ttl_snapshot = 300      # WSS — 5 min
+ttl_historical = 43200  # WSD — 12 hours
+ttl_minute_bars = 300   # WSI — 5 min
+ttl_ticks = 60          # WST — 1 min
+ttl_dataset = 86400     # WSET — 24 hours
+ttl_macro = 86400       # EDB — 24 hours
+ttl_sector = 86400      # WSES/WSEE — 24 hours
+ttl_screening = 600     # WEQS — 10 min
+ttl_estimates = 14400   # Consensus — 4 hours
+ttl_holders = 86400     # Shareholders — 24 hours
+ttl_dates = 86400       # Trading calendar — 24 hours
+ttl_portfolio = 300     # WPF/WPS/WPD — 5 min
+
+[api]
+timeout = 30.0
+retries = 2
+backoff = 1.0
+
+[log]
+format = "text"   # "json" or "text"
+level = "INFO"

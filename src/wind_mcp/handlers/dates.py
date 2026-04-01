@@ -11,6 +11,7 @@ import logging
 from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_tdays, parse_tdaysoffset, parse_tdayscount
+from ..core.executor import run_wind_sync
 from ..models.inputs import TradingDaysInput, DateOffsetInput, DaysCountInput
 from ..utils import today_str
 
@@ -31,7 +32,7 @@ def handle_trading_days(params: TradingDaysInput) -> list[str]:
     session = WindSession.get()
     logger.info(f"tdays: begin={params.begin_date}, end={end_date}")
 
-    result = session.w.tdays(params.begin_date, end_date, options)
+    result = run_wind_sync(session.w.tdays, params.begin_date, end_date, options)
     parsed = parse_tdays(result)
 
     cache.set("tdays", parsed, "dates", *cache_key_args)
@@ -52,7 +53,7 @@ def handle_date_offset(params: DateOffsetInput) -> str:
     session = WindSession.get()
     logger.info(f"tdaysoffset: offset={params.offset}, begin={begin_date}")
 
-    result = session.w.tdaysoffset(params.offset, begin_date, options)
+    result = run_wind_sync(session.w.tdaysoffset, params.offset, begin_date, options)
     parsed = parse_tdaysoffset(result)
 
     cache.set("tdaysoffset", parsed, "dates", *cache_key_args)
@@ -73,7 +74,7 @@ def handle_days_count(params: DaysCountInput) -> int:
     session = WindSession.get()
     logger.info(f"tdayscount: begin={params.begin_date}, end={end_date}")
 
-    result = session.w.tdayscount(params.begin_date, end_date, options)
+    result = run_wind_sync(session.w.tdayscount, params.begin_date, end_date, options)
     parsed = parse_tdayscount(result)
 
     cache.set("tdayscount", parsed, "dates", *cache_key_args)

@@ -10,6 +10,7 @@ from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wst
 from ..core.converter import ensure_wind_codes
+from ..core.executor import run_wind_sync
 from ..tools.field_expander import expand_fields
 from ..models.inputs import TicksInput
 
@@ -31,7 +32,7 @@ def handle_ticks(params: TicksInput) -> list[dict]:
     session = WindSession.get()
     logger.info(f"WST: code={params.codes}, fields={fields_str}, begin={params.begin_time}")
 
-    result = session.w.wst(params.codes, fields_str, params.begin_time, params.end_time, params.options)
+    result = run_wind_sync(session.w.wst, params.codes, fields_str, params.begin_time, params.end_time, params.options)
     parsed = parse_wst(result)
 
     cache.set("wst", parsed, "ticks", *cache_key_args)

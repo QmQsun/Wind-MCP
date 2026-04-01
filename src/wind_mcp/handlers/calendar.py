@@ -12,6 +12,7 @@ import logging
 from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wset
+from ..core.executor import run_wind_sync
 from ..models.inputs import EventCalendarInput
 from ..utils import today_str
 
@@ -49,7 +50,7 @@ def handle_calendar(params: EventCalendarInput) -> list[dict]:
     session = WindSession.get()
     logger.info(f"Calendar WSET: table={table_name}, options={options}")
 
-    result = session.w.wset(table_name, options)
+    result = run_wind_sync(session.w.wset, table_name, options)
     parsed = parse_wset(result)
 
     cache.set("calendar_wset", parsed, "dataset", *cache_key_args)

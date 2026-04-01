@@ -5,7 +5,7 @@ Every tool has a corresponding input model that validates parameters
 and provides clear descriptions for the MCP tool schema.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from .enums import ResponseFormat, Periodicity, BarInterval, DayType, TradingCalendar
 
 
@@ -48,6 +48,12 @@ class HistoricalInput(BaseModel):
         default="", description="e.g. 'Period=W;PriceAdj=F;Fill=Previous'"
     )
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
+
+    @model_validator(mode="after")
+    def check_date_range(self):
+        from ..core.validators import validate_date_range
+        validate_date_range(self.begin_date, self.end_date)
+        return self
 
 
 class MinuteBarsInput(BaseModel):
@@ -144,6 +150,13 @@ class SectorSeriesInput(BaseModel):
     options: str = Field(default="")
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
 
+    @model_validator(mode="after")
+    def check_constraints(self):
+        from ..core.validators import validate_single_field, validate_date_range
+        self.fields = validate_single_field(self.fields, "WSES")
+        validate_date_range(self.begin_date, self.end_date)
+        return self
+
 
 class SectorSnapshotInput(BaseModel):
     """Input for wind_get_sector_snapshot (WSEE)."""
@@ -152,6 +165,12 @@ class SectorSnapshotInput(BaseModel):
     fields: str = Field(..., description="Single field only.")
     options: str = Field(default="")
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
+
+    @model_validator(mode="after")
+    def check_single_field(self):
+        from ..core.validators import validate_single_field
+        self.fields = validate_single_field(self.fields, "WSEE")
+        return self
 
 
 class ScreenInput(BaseModel):
@@ -200,6 +219,12 @@ class DynamicScreenInput(BaseModel):
         default=None, description="Return only top N results after ranking."
     )
     response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
+
+    @model_validator(mode="after")
+    def check_universe(self):
+        from ..core.validators import validate_universe_format
+        validate_universe_format(self.universe)
+        return self
 
 
 class EstimatesInput(BaseModel):
@@ -286,3 +311,83 @@ class DaysCountInput(BaseModel):
     end_date: str = Field(default="", description="End date.")
     day_type: DayType = Field(default=DayType.TRADING)
     calendar: TradingCalendar = Field(default=TradingCalendar.SSE)
+
+
+# === Composite Tools ===
+
+class CompanyProfileInput(BaseModel):
+    """Input for wind_company_profile."""
+
+    codes: str = Field(
+        ...,
+        description="Single security code. e.g. '600030.SH' or 'AAPL US Equity'.",
+    )
+    response_format: ResponseFormat = Field(default=ResponseFormat.JSON)
+
+
+# === Portfolio Tools ===
+
+class PortfolioReportInput(BaseModel):
+    """Input for wind_portfolio_report (WPF)."""
+
+    product_name: str = Field(
+        ..., description="Portfolio/product name in Wind PMS/AMS."
+    )
+    table_name: str = Field(
+        ...,
+        description=(
+            "Report table name. Common values: "
+            "'Performance' (业绩报表), 'MarketPerformance' (市场表现), "
+            "'Attribution' (归因分析), 'RiskAnalysis' (风险分析)"
+        ),
+    )
+    options: str = Field(
+        default="",
+        description=(
+            "Report options. e.g. 'view=AMS;Owner=frank;startDate=2024-01-01;endDate=2025-01-01;Currency=CNY'. "
+            "view: AMS or PMS. Owner: portfolio owner."
+        ),
+    )
+    response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
+
+
+class PortfolioSnapshotInput(BaseModel):
+    """Input for wind_portfolio_snapshot (WPS)."""
+
+    portfolio_name: str = Field(
+        ..., description="Portfolio name in Wind PMS/AMS."
+    )
+    fields: str = Field(
+        ...,
+        description=(
+            "WPS fields. e.g. 'nav,return_1d,return_ytd,total_asset,cash_pct'. "
+            "For holdings: 'wind_code,sec_name,weight,mkt_value,cost,pnl'."
+        ),
+    )
+    options: str = Field(
+        default="",
+        description="e.g. 'view=AMS;Owner=frank;date=2025-03-31'",
+    )
+    response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)
+
+
+class PortfolioSeriesInput(BaseModel):
+    """Input for wind_portfolio_series (WPD)."""
+
+    portfolio_name: str = Field(
+        ..., description="Portfolio name in Wind PMS/AMS."
+    )
+    fields: str = Field(
+        ...,
+        description="WPD fields. e.g. 'nav,return_acc,return_ann,maxdrawdown'.",
+    )
+    begin_date: str = Field(..., description="Start date.")
+    end_date: str = Field(default="", description="End date.")
+    options: str = Field(
+        default="",
+        description=(
+            "e.g. 'view=AMS;Owner=frank;Period=D;Fill=Previous;Currency=CNY'. "
+            "Period: D/W/M/Q/S/Y."
+        ),
+    )
+    response_format: ResponseFormat = Field(default=ResponseFormat.MARKDOWN)

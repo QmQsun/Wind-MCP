@@ -9,6 +9,7 @@ import logging
 from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wses, parse_wsee
+from ..core.executor import run_wind_sync
 from ..models.inputs import SectorSeriesInput, SectorSnapshotInput
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def handle_sector_series(params: SectorSeriesInput) -> list[dict]:
     session = WindSession.get()
     logger.info(f"WSES: codes={codes_str}, field={params.fields}, begin={params.begin_date}")
 
-    result = session.w.wses(codes_str, params.fields, params.begin_date, params.end_date, params.options)
+    result = run_wind_sync(session.w.wses, codes_str, params.fields, params.begin_date, params.end_date, params.options)
     parsed = parse_wses(result)
 
     cache.set("wses", parsed, "sector", *cache_key_args)
@@ -47,7 +48,7 @@ def handle_sector_snapshot(params: SectorSnapshotInput) -> list[dict]:
     session = WindSession.get()
     logger.info(f"WSEE: codes={codes_str}, field={params.fields}")
 
-    result = session.w.wsee(codes_str, params.fields, params.options)
+    result = run_wind_sync(session.w.wsee, codes_str, params.fields, params.options)
     parsed = parse_wsee(result)
 
     cache.set("wsee", parsed, "sector", *cache_key_args)

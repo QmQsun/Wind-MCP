@@ -10,6 +10,7 @@ from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_wss, parse_wset
 from ..core.converter import ensure_wind_codes
+from ..core.executor import run_wind_sync
 from ..models.inputs import StockConnectInput
 from ..utils import today_str
 
@@ -29,7 +30,7 @@ def handle_stock_connect(params: StockConnectInput) -> list[dict]:
 
         session = WindSession.get()
         logger.info(f"StockConnect WSET: options={options}")
-        result = session.w.wset("StockConnect", options)
+        result = run_wind_sync(session.w.wset, "StockConnect", options)
         parsed = parse_wset(result)
 
         cache.set("stock_connect_wset", parsed, "dataset", *cache_key_args)
@@ -49,7 +50,7 @@ def handle_stock_connect(params: StockConnectInput) -> list[dict]:
 
         session = WindSession.get()
         logger.info(f"StockConnect WSS: codes={codes_str}")
-        result = session.w.wss(codes_str, fields_str, params.options)
+        result = run_wind_sync(session.w.wss, codes_str, fields_str, params.options)
         parsed = parse_wss(result)
 
         cache.set("stock_connect_wss", parsed, "snapshot", *cache_key_args)

@@ -9,6 +9,7 @@ import logging
 from ..core.session import WindSession
 from ..core.cache import get_cache
 from ..core.parser import parse_edb
+from ..core.executor import run_wind_sync
 from ..models.inputs import MacroInput
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def handle_macro(params: MacroInput) -> list[dict]:
     session = WindSession.get()
     logger.info(f"EDB: codes={codes_str}, begin={params.begin_date}, end={params.end_date}")
 
-    result = session.w.edb(codes_str, params.begin_date, params.end_date, params.options)
+    result = run_wind_sync(session.w.edb, codes_str, params.begin_date, params.end_date, params.options)
     parsed = parse_edb(result)
 
     cache.set("edb", parsed, "macro", *cache_key_args)
