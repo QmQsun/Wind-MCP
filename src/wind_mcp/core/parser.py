@@ -198,10 +198,12 @@ def parse_tdays(result) -> list[str]:
 def parse_tdaysoffset(result) -> str:
     """Parse tdaysoffset result. Returns single date string."""
     _check_error(result)
-    return result.Data.strftime("%Y-%m-%d")
+    d = result.Data[0] if isinstance(result.Data, list) else result.Data
+    return d.strftime("%Y-%m-%d")
 
 
 def parse_tdayscount(result) -> int:
     """Parse tdayscount result. Returns integer count."""
     _check_error(result)
-    return int(result.Data)
+    d = result.Data[0] if isinstance(result.Data, list) else result.Data
+    return int(d)

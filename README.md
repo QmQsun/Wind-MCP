@@ -8,7 +8,9 @@ A Model Context Protocol server that gives AI assistants direct access to Wind F
 
 ---
 
-Wind MCP bridges the Wind Financial Terminal (万得) with AI assistants via the [Model Context Protocol](https://modelcontextprotocol.io). It exposes **19 tools** covering market data, fundamentals, macro economics, screening, estimates, and date utilities — all accessible through natural language.
+Wind MCP bridges the Wind Financial Terminal (万得) with AI assistants via the [Model Context Protocol](https://modelcontextprotocol.io). It exposes **23 tools + 1 resource** covering market data, fundamentals, macro economics, screening, estimates, portfolio management, and date utilities — all accessible through natural language.
+
+> **Platform:** Windows only (WindPy is a Windows COM-based library).
 
 > Companion project to [Bloomberg-MCP](https://github.com/QmQsun/Bloomberg-MCP). Same architecture, same philosophy — but for Wind (万得).
 
@@ -36,7 +38,7 @@ graph TB
 
     subgraph "Wind MCP Server"
         direction TB
-        MCP["FastMCP Server<br/><i>19 tools exposed</i>"]
+        MCP["FastMCP Server<br/><i>23 tools + 1 resource</i>"]
 
         subgraph Handlers["Handler Layer"]
             direction LR
@@ -72,7 +74,7 @@ graph TB
     style CACHE fill:#2e7d32,stroke:#1b5e20,color:#fff
 ```
 
-## Tools Overview (19 tools)
+## Tools Overview (23 tools + 1 resource)
 
 ```mermaid
 graph LR
@@ -98,16 +100,27 @@ graph LR
         T13["wind_sector_snapshot<br/><i>WSEE snapshot</i>"]
     end
 
-    subgraph "Connect & Calendar (3)"
+    subgraph "Connect & Calendar (2)"
         T14["wind_stock_connect<br/><i>Northbound flows</i>"]
         T15["wind_event_calendar<br/><i>IPO, earnings...</i>"]
-        T16["wind_list_fieldsets<br/><i>Available FieldSets</i>"]
+    end
+
+    subgraph "Composite & Portfolio (4)"
+        T16["wind_company_profile<br/><i>One-stop overview</i>"]
+        T17["wind_portfolio_report<br/><i>WPF reports</i>"]
+        T18["wind_portfolio_snapshot<br/><i>WPS holdings</i>"]
+        T19["wind_portfolio_series<br/><i>WPD time series</i>"]
     end
 
     subgraph "Date Utilities (3)"
-        T17["wind_trading_days<br/><i>TDAYS</i>"]
-        T18["wind_date_offset<br/><i>TDAYSOFFSET</i>"]
-        T19["wind_days_count<br/><i>TDAYSCOUNT</i>"]
+        T20["wind_trading_days<br/><i>TDAYS</i>"]
+        T21["wind_date_offset<br/><i>TDAYSOFFSET</i>"]
+        T22["wind_days_count<br/><i>TDAYSCOUNT</i>"]
+    end
+
+    subgraph "Observability (1 tool + 1 resource)"
+        T23["wind_metrics<br/><i>Server stats</i>"]
+        R1["wind://health<br/><i>Health check</i>"]
     end
 
     style T6 fill:#1a73e8,stroke:#1557b0,color:#fff
@@ -116,6 +129,11 @@ graph LR
     style T11 fill:#7b1fa2,stroke:#6a1b9a,color:#fff
     style T12 fill:#7b1fa2,stroke:#6a1b9a,color:#fff
     style T13 fill:#7b1fa2,stroke:#6a1b9a,color:#fff
+    style T16 fill:#00695c,stroke:#004d40,color:#fff
+    style T17 fill:#00695c,stroke:#004d40,color:#fff
+    style T18 fill:#00695c,stroke:#004d40,color:#fff
+    style T19 fill:#00695c,stroke:#004d40,color:#fff
+    style R1 fill:#546e7a,stroke:#37474f,color:#fff
 ```
 
 ## Key Features
@@ -202,7 +220,22 @@ sequenceDiagram
 |------|-----------|-------------|----------------|
 | `wind_stock_connect` | WSET/WSS | Northbound/Southbound flow data | `codes`, `direction`, `date` |
 | `wind_event_calendar` | WSET | IPO, earnings, dividend calendars | `event_type`, `begin_date`, `end_date` |
-| `wind_list_fieldsets` | — | List all available FieldSet shortcuts | — |
+
+### Composite & Portfolio
+
+| Tool | WindPy API | Description | Key Parameters |
+|------|-----------|-------------|----------------|
+| `wind_company_profile` | WSS+WSD | One-stop company overview (snapshot + estimates + price history) | `codes` |
+| `wind_portfolio_report` | WPF | Portfolio performance/attribution/risk reports | `product_name`, `table_name`, `options` |
+| `wind_portfolio_snapshot` | WPS | Portfolio NAV, holdings, weights, PnL | `portfolio_name`, `fields`, `options` |
+| `wind_portfolio_series` | WPD | Portfolio performance time series | `portfolio_name`, `fields`, `begin_date` |
+
+### Observability
+
+| Tool | Type | Description |
+|------|------|-------------|
+| `wind_metrics` | Tool | Server metrics: tool call counts, latency, cache hit rate, uptime |
+| `wind://health` | Resource | Wind connection and cache health status |
 
 ### Date Utilities
 
@@ -305,14 +338,51 @@ flowchart LR
 
 Built-in cache reduces Wind API load with data-type-aware TTLs:
 
-| Data Type | TTL | Rationale |
-|-----------|-----|-----------|
+| Data Type | Default TTL | Rationale |
+|-----------|-------------|-----------|
 | Realtime quotes (WSQ) | 30 seconds | Near real-time |
-| Historical (WSD) | 12 hours | End-of-day data stable |
 | Snapshot (WSS) | 5 minutes | Moderate refresh |
-| Static reference | 24 hours | Rarely changes |
-| Macro data (EDB) | 6 hours | Periodic updates |
-| Dataset (WSET) | 1 hour | Moderate refresh |
+| Minute bars (WSI) | 5 minutes | Intraday refresh |
+| Ticks (WST) | 1 minute | High-frequency |
+| Portfolio (WPF/WPS/WPD) | 5 minutes | Moderate refresh |
+| Screening (WEQS) | 10 minutes | Moderate refresh |
+| Estimates | 4 hours | Consensus updates infrequently |
+| Historical (WSD) | 12 hours | End-of-day data stable |
+| Macro data (EDB) | 24 hours | Periodic updates |
+| Dataset (WSET) | 24 hours | Reference data |
+| Sector (WSES/WSEE) | 24 hours | Rarely changes |
+| Holders / Dates | 24 hours | Rarely changes |
+
+All TTLs are configurable via `wind_mcp.toml` or environment variables. See [Configuration](#configuration).
+
+## Configuration
+
+Server behavior can be customized via `wind_mcp.toml` in the project root. All values can also be overridden via environment variables with the prefix `WIND_MCP_` (e.g., `WIND_MCP_CACHE_MAXSIZE=5000`).
+
+```toml
+[session]
+connect_timeout = 30        # Seconds to wait for Wind connection
+reconnect_retries = 3       # Auto-reconnect attempts
+reconnect_backoff = 1.0     # Backoff multiplier between retries
+
+[cache]
+maxsize = 2000              # Max cached entries (LRU eviction)
+ttl_realtime = 30           # WSQ — near real-time
+ttl_snapshot = 300          # WSS — 5 min
+ttl_historical = 43200     # WSD — 12 hours
+ttl_dataset = 86400        # WSET — 24 hours
+ttl_macro = 86400          # EDB — 24 hours
+ttl_portfolio = 300        # WPF/WPS/WPD — 5 min
+
+[api]
+timeout = 30.0              # Per-call timeout (seconds)
+retries = 2                 # Retry count on transient errors
+backoff = 1.0               # Backoff multiplier
+
+[log]
+format = "text"             # "json" or "text"
+level = "INFO"
+```
 
 ## Project Structure
 
@@ -321,26 +391,32 @@ wind-mcp/
 ├── pyproject.toml
 ├── README.md
 ├── LICENSE
-├── CLAUDE.md
+├── wind_mcp.toml                  # Server configuration (cache TTL, timeouts, retries)
 ├── run_server.bat / run_server.ps1
 ├── src/wind_mcp/
 │   ├── __init__.py
 │   ├── __main__.py
-│   ├── server.py                  # FastMCP entry point, 19 tools
+│   ├── server.py                  # FastMCP entry point, 23 tools + 1 resource
 │   ├── formatters.py              # Markdown table & JSON output
-│   ├── utils.py                   # Date normalization, validation
 │   ├── core/
-│   │   ├── session.py             # WindSession singleton + atexit
-│   │   ├── cache.py               # TTL cache with hit/miss stats
+│   │   ├── session.py             # WindSession singleton + reconnect
+│   │   ├── cache.py               # TTL cache with LRU eviction
 │   │   ├── parser.py              # 12 WindData parsers
-│   │   └── converter.py           # Bloomberg → Wind ticker converter
+│   │   ├── converter.py           # Bloomberg → Wind ticker converter
+│   │   ├── executor.py            # Single-thread executor for Wind API calls
+│   │   ├── validators.py          # Input validation (codes, dates, fields)
+│   │   ├── resilience.py          # Timeout, retry, stale-cache fallback
+│   │   ├── config.py              # Centralized config (env > toml > defaults)
+│   │   ├── metrics.py             # Counters + histograms for observability
+│   │   ├── universe.py            # Universe resolution (index/sector → security list)
+│   │   └── filters.py             # In-memory data filtering (gt/lt/between/in/...)
 │   ├── models/
 │   │   ├── enums.py               # ResponseFormat, Periodicity, etc.
-│   │   └── inputs.py              # 18 Pydantic input models
+│   │   └── inputs.py              # Pydantic input models
 │   ├── tools/
 │   │   ├── fieldsets.py           # 16 FieldSet definitions
 │   │   └── field_expander.py      # FieldSet → field list resolver
-│   ├── handlers/                  # 12 handler modules
+│   ├── handlers/                  # 16 handler modules
 │   │   ├── snapshot.py            # WSS
 │   │   ├── historical.py          # WSD
 │   │   ├── minute_bars.py         # WSI
@@ -354,18 +430,26 @@ wind-mcp/
 │   │   ├── holders.py             # Holder analysis
 │   │   ├── stock_connect.py       # Northbound/Southbound
 │   │   ├── calendar.py            # Event calendar
-│   │   └── dates.py               # TDAYS / TDAYSOFFSET / TDAYSCOUNT
+│   │   ├── dates.py               # TDAYS / TDAYSOFFSET / TDAYSCOUNT
+│   │   ├── composite.py           # Company profile (multi-source)
+│   │   └── portfolio.py           # WPF / WPS / WPD portfolio tools
 │   └── data/                      # Static mapping files
 │       ├── us_exchange_map.json   # ~200 US tickers → exchange
 │       ├── index_map.json         # BBG → Wind index mapping
 │       ├── commodity_map.json     # BBG → Wind commodity mapping
 │       └── currency_map.json      # BBG → Wind currency mapping
-├── tests/                         # 42 unit tests (no Wind needed)
+├── tests/                         # 101 unit tests (no Wind needed)
 │   ├── test_parser.py
 │   ├── test_fieldsets.py
 │   ├── test_cache.py
+│   ├── test_config.py
+│   ├── test_converter.py
+│   ├── test_filters.py
 │   ├── test_formatters.py
-│   └── test_converter.py
+│   ├── test_inputs.py
+│   ├── test_metrics.py
+│   ├── test_resilience.py
+│   └── test_validators.py
 └── examples/
     ├── basic_usage.py
     └── screening_example.py
@@ -375,43 +459,58 @@ wind-mcp/
 
 ### Prerequisites
 
-- Python 3.10+
-- **Wind Financial Terminal (万得) running and logged in**
-- WindPy installed (`pip install WindPy` or repair via Wind Terminal)
+- **Windows** (WindPy is a Windows COM-based library)
+- Python 3.10+ (must match Wind Terminal bitness — typically 64-bit)
+- **Wind Financial Terminal (万得) running and logged in** (iWind or WFT)
+- **WindPy** — installed via Wind Terminal, NOT via pip. Open Wind Terminal → click "Repair" or install the WindPy plugin from the Tools menu.
 
-### Setup
+### Verify WindPy
+
+Before installing Wind MCP, verify that WindPy works in your Python environment:
+
+```python
+python -c "from WindPy import w; w.start(); print(w.isconnected())"
+# Should print: True
+```
+
+If this returns `False` or errors, fix your WindPy installation first. Common issues:
+- Wind Terminal not running / not logged in
+- Python bitness mismatch (e.g., 32-bit Python with 64-bit Wind)
+- WindPy not installed (repair via Wind Terminal)
+
+### Install
 
 ```bash
-# Clone the repository
+# From source
 git clone https://github.com/QmQsun/Wind-MCP.git
 cd Wind-MCP
-
-# Install
 pip install .            # standard install
 # or: pip install -e .   # editable mode (for development)
+
+# Or from PyPI
+pip install wind-mcp
 ```
 
 ### Configure Claude Code
 
-Add to your Claude Code MCP settings (`.mcp.json`):
+Add a `.mcp.json` file to register the MCP server. Two options:
+
+**Global** (all projects can use Wind MCP) — place at `~/.mcp.json` (i.e., `C:\Users\<you>\.mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "wind-mcp": {
-      "command": "python",
-      "args": ["-m", "wind_mcp.server"],
-      "cwd": "/path/to/Wind-MCP/src"
+      "command": "wind-mcp",
+      "args": []
     }
   }
 }
 ```
 
-### Install from PyPI
+**Project-level** (only one project) — place `.mcp.json` in the project root directory.
 
-```bash
-pip install wind-mcp
-```
+> The `wind-mcp` command is the console entry point installed by pip. Alternatively, use `"command": "python", "args": ["-m", "wind_mcp.server"]`.
 
 ## Quick Start
 
@@ -422,10 +521,10 @@ pip install wind-mcp
 python -m wind_mcp.server
 
 # HTTP transport (for web clients)
-python -m wind_mcp.server --transport http --port 8080
+python -m wind_mcp.server --http --port=8080
 
 # SSE transport (for streaming clients)
-python -m wind_mcp.server --transport sse --port 8080
+python -m wind_mcp.server --sse --port=8080
 ```
 
 ### Windows
@@ -484,13 +583,6 @@ pytest                    # Unit tests (no Wind Terminal needed)
 black src/ tests/
 ruff check src/ tests/
 ```
-
-## Contributors
-
-| | Contributor | Role |
-|---|---|---|
-| 1 | [QmQsun](https://github.com/QmQsun) | Architecture, spec design, code review |
-| 2 | Claude (Anthropic) | Implementation, code generation, testing |
 
 ## Related Projects
 

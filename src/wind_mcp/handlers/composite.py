@@ -27,10 +27,7 @@ def handle_company_profile(params: CompanyProfileInput) -> dict:
 
     Returns a dict with sections: basic, estimates, price_history.
     """
-    codes = params.codes
-    if isinstance(codes, list):
-        codes = codes[0]  # Single company
-    codes = ensure_wind_codes([codes])[0]
+    codes = ensure_wind_codes([params.codes])[0]
 
     session = WindSession.get()
     result = {}

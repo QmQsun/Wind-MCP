@@ -18,3 +18,5 @@ env/
 .coverage
 htmlcov/
 *.log
+CLAUDE.md
+.claude/

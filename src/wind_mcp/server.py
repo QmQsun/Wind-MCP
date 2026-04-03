@@ -1,14 +1,13 @@
 """
 Wind MCP Server — entry point.
 
-Exposes ~19 tools via FastMCP for AI assistant access to Wind Financial Terminal.
+Exposes 23 tools + 1 resource via FastMCP for AI assistant access to Wind Financial Terminal.
 """
 
 import json
 import logging
 import time
 from contextlib import asynccontextmanager
-from functools import wraps
 from mcp.server.fastmcp import FastMCP
 from .models.inputs import (
     SnapshotInput, HistoricalInput, MinuteBarsInput, TicksInput,
@@ -21,7 +20,6 @@ from .models.inputs import (
 )
 from .formatters import format_response
 
-# Import handlers
 from .handlers.snapshot import handle_snapshot
 from .handlers.historical import handle_historical
 from .handlers.minute_bars import handle_minute_bars
@@ -79,7 +77,7 @@ async def wind_lifespan(server):
 
 mcp = FastMCP(
     "wind-mcp",
-    description="Wind Financial Terminal MCP Server",
+    instructions="Wind Financial Terminal MCP Server",
     lifespan=wind_lifespan,
 )
 
@@ -410,18 +408,15 @@ def wind_health() -> str:
 
 def main():
     import sys
-    if "--http" in sys.argv:
+    if "--http" in sys.argv or "--sse" in sys.argv:
         port = 8080
         for arg in sys.argv:
             if arg.startswith("--port="):
                 port = int(arg.split("=")[1])
-        mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
-    elif "--sse" in sys.argv:
-        port = 8080
-        for arg in sys.argv:
-            if arg.startswith("--port="):
-                port = int(arg.split("=")[1])
-        mcp.run(transport="sse", host="0.0.0.0", port=port)
+        transport = "streamable-http" if "--http" in sys.argv else "sse"
+        mcp.settings.host = "0.0.0.0"
+        mcp.settings.port = port
+        mcp.run(transport=transport)
     else:
         mcp.run(transport="stdio")
 
